@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Footstep Power</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background: #000;
+      color: #fff;
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    .box {
+      max-width: 600px;
+      margin: auto;
+      background: #111;
+      padding: 20px;
+      border-radius: 10px;
+    }
+    input, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+    }
+    input {
+      background: #222;
+      color: #fff;
+    }
+    button {
+      background: #0af;
+      color: white;
+      cursor: pointer;
+    }
+    ul {
+      margin-top: 20px;
+      padding-left: 0;
+      list-style: none;
+    }
+    li {
+      margin-bottom: 10px;
+      padding: 8px;
+      background: #222;
+      border-left: 4px solid #0af;
+    }
+    canvas {
+      margin-top: 30px;
+    }
+    .summary {
+      margin-top: 20px;
+      font-weight: bold;
+      text-align: center;
+      color: #0af;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Footstep Power Generator</h2>
+    <input type="number" id="voltage" step="1" placeholder="Voltage for this step (mV)" />
+    <button onclick="addStep()">Add Step</button>
+    <button onclick="downloadCSV()">Download CSV</button>
+
+    <ul id="powerList"></ul>
+    <div class="summary" id="calorieDisplay">Total Calories Burned: 0 kcal</div>
+    <canvas id="powerChart"></canvas>
+  </div>
+
+  <script>
+    let step = 0;
+    const resistance = 10000; // 10k ohm
+    const caloriePerStep = 0.04;
+    let totalCalories = 0;
+    const dataList = [];
+
+    const ctx = document.getElementById("powerChart").getContext("2d");
+    const chart = new Chart(ctx, {
+      type: "scatter",
+      data: {
+        datasets: [{
+          label: "Step Power (mW)",
+          data: [],
+          borderColor: "#0af",
+          backgroundColor: "rgba(0,170,255,0.3)",
+          pointRadius: 5,
+          showLine: true
+        }]
+      },
+      options: {
+        scales: {
+          x: {
+            title: { display: true, text: "Voltage (V)", color: "#fff" },
+            grid: { color: "#333" },
+            ticks: { color: "#fff" }
+          },
+          y: {
+            title: { display: true, text: "Power (mW)", color: "#fff" },
+            grid: { color: "#333" },
+            ticks: { color: "#fff" }
+          }
+        },
+        plugins: {
+          title: { display: true, text: "Power vs Voltage", color: "#fff" },
+          legend: { labels: { color: "#fff" } }
+        }
+      }
+    });
+
+    function addStep() {
+      const voltage_mV = parseFloat(document.getElementById("voltage").value);
+      if (isNaN(voltage_mV) || voltage_mV <= 0) return alert("Enter valid voltage");
+
+      const voltage = voltage_mV / 1000; // convert to volts
+      const power = (voltage * voltage / resistance) * 1000; // in milliwatts
+
+      step++;
+      totalCalories += caloriePerStep;
+
+      chart.data.datasets[0].data.push({ x: voltage, y: power });
+      chart.update();
+
+      dataList.push({
+        step,
+        voltage: voltage.toFixed(3),
+        power: power.toFixed(4)
+      });
+
+      const li = document.createElement("li");
+      li.textContent = `Step ${step}: ${voltage_mV}mV → ${power.toFixed(4)} mW`;
+      document.getElementById("powerList").appendChild(li);
+      document.getElementById("voltage").value = "";
+      document.getElementById("calorieDisplay").innerText = `Total Calories Burned: ${totalCalories.toFixed(2)} kcal`;
+    }
+
+    function downloadCSV() {
+      let csv = "Step,Voltage (V),Power (mW)\n";
+      dataList.forEach(row => {
+        csv += `${row.step},${row.voltage},${row.power}\n`;
+      });
+      const blob = new Blob([csv], { type: "text/csv" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "footstep_power_data.csv";
+      link.click();
+    }
+  </script>
+</body>
+</html>
